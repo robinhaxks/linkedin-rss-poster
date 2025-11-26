@@ -1,0 +1,5 @@
+.__pycache__/
+.env
+venv/
+*.pyc
+last_blog_title.txt   # optional: if you prefer not to commit, but we will commit it via workflow
