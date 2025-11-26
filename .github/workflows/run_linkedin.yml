@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write  
+  contents: write
 
 jobs:
   run:
@@ -21,26 +21,37 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install specific Chrome version
+      - name: Install specific Chrome version (142.0.7444.175)
         run: |
           sudo apt-get update
           sudo apt-get install -y wget unzip xvfb libxi6
 
+          echo "Downloading Chrome 142.0.7444.175..."
           wget https://storage.googleapis.com/chrome-for-testing-public/142.0.7444.175/linux64/chrome-linux64.zip
           wget https://storage.googleapis.com/chrome-for-testing-public/142.0.7444.175/linux64/chromedriver-linux64.zip
 
           unzip chrome-linux64.zip
+          
+          # Remove existing Chrome binary
+          if [ -f "/usr/bin/google-chrome" ]; then
+            echo "Removing existing Chrome..."
+            sudo rm /usr/bin/google-chrome
+          fi
+
+          echo "Installing new Chrome..."
           sudo mv chrome-linux64 /opt/google-chrome
           sudo ln -s /opt/google-chrome/chrome /usr/bin/google-chrome
 
+          echo "Installing Chromedriver..."
           unzip chromedriver-linux64.zip
           sudo mv chromedriver-linux64/chromedriver /usr/bin/chromedriver
           sudo chmod +x /usr/bin/chromedriver
 
+          echo "Verifying installation..."
           google-chrome --version
           chromedriver --version
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -55,15 +66,20 @@ jobs:
         env:
           DOTENV_PATH: .env
           DISPLAY: ":99"
-        run: python main.py
+        run: |
+          # Start virtual display for Selenium
+          Xvfb :99 -screen 0 1920x1080x24 &
+
+          python main.py
 
       - name: Commit last_blog_title.txt if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           if [ -f last_blog_title.txt ]; then
             git add last_blog_title.txt || true
             git diff --staged --quiet || ( git commit -m "chore: update last_blog_title.txt" && git push )
           else
-            echo "no last_blog_title.txt found"
+            echo "last_blog_title.txt not found"
           fi
