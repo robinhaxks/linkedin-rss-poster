@@ -126,11 +126,29 @@ print("------------------------------------------------")
 
 print("Driver initializing...........................")
 
+# chrome_options = Options()
+# chrome_options.add_argument("--start-maximized")
+# chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+# chrome_options.add_experimental_option("detach", True)
+# chrome_options.add_argument("--headless=new") 
+
 chrome_options = Options()
-chrome_options.add_argument("--start-maximized")
+
+chrome_options.add_argument("--headless=new")
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--window-size=1920,1080")
+
+chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-chrome_options.add_experimental_option("detach", True)
-chrome_options.add_argument("--headless=new") 
+chrome_options.add_argument("--disable-features=IsolateOrigins,site-per-process")
+chrome_options.add_argument("--disable-infobars")
+chrome_options.add_argument("--remote-debugging-port=9222")
+
+
+chrome_options.add_argument("--force-device-scale-factor=1")
+chrome_options.add_argument("--force-dark-mode=off")
+
 
 
 cache_dir = os.path.expanduser("~/chromedriver_cache")
