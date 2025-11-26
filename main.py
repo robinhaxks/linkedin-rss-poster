@@ -14,10 +14,9 @@ import warnings
 import shutil
 import time
 import os
-load_dotenv('.env')
 
 
-# load_dotenv()
+load_dotenv()
 
 os.environ["GRPC_VERBOSITY"] = "ERROR"
 os.environ["GLOG_minloglevel"] = "2"
@@ -148,9 +147,7 @@ service = Service(driver_path_file)
 driver = webdriver.Chrome(service=service, options=chrome_options)
 wait = WebDriverWait(driver, 15)
 
-# -----------------------------------------------------------------------------
-# ✅ Login and Navigate to Feed
-# -----------------------------------------------------------------------------
+
 driver.get("https://www.linkedin.com/login")
 print("🌐 Navigating to LinkedIn login...")
 
@@ -182,6 +179,9 @@ try:
     print("✅ 'Start a post' button clicked successfully!")
 except Exception as e:
     print("⚠️ Could not click 'Start a post' button:", e)
+
+
+
 
 try:
     post_input = wait.until(
