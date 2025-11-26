@@ -1,16 +1,15 @@
 name: Run LinkedIn RSS Poster
 
 on:
-  # schedule:
-  #   - cron: "0 * * * *"     # every hour at :00
-  workflow_dispatch:       # manual trigger
+  workflow_dispatch:
 
 permissions:
-  contents: write          # required to commit back to repo
+  contents: write  
 
 jobs:
   run:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,15 +21,24 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Chrome (for Selenium)
+      - name: Install specific Chrome version
         run: |
           sudo apt-get update
-          sudo apt-get install -y unzip xvfb libxi6
-          # Install latest chrome
-          wget https://some-mirror/path/google-chrome-stable_142.0.7444.175_amd64.deb
-          sudo dpkg -i google-chrome-stable_142.0.7444.175_amd64.deb
-          sudo apt-get -f install 
+          sudo apt-get install -y wget unzip xvfb libxi6
 
+          wget https://storage.googleapis.com/chrome-for-testing-public/142.0.7444.175/linux64/chrome-linux64.zip
+          wget https://storage.googleapis.com/chrome-for-testing-public/142.0.7444.175/linux64/chromedriver-linux64.zip
+
+          unzip chrome-linux64.zip
+          sudo mv chrome-linux64 /opt/google-chrome
+          sudo ln -s /opt/google-chrome/chrome /usr/bin/google-chrome
+
+          unzip chromedriver-linux64.zip
+          sudo mv chromedriver-linux64/chromedriver /usr/bin/chromedriver
+          sudo chmod +x /usr/bin/chromedriver
+
+          google-chrome --version
+          chromedriver --version
 
       - name: Install dependencies
         run: |
@@ -47,14 +55,12 @@ jobs:
         env:
           DOTENV_PATH: .env
           DISPLAY: ":99"
-        run: |
-          python main.py
+        run: python main.py
 
       - name: Commit last_blog_title.txt if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # ensure file exists and is tracked
           if [ -f last_blog_title.txt ]; then
             git add last_blog_title.txt || true
             git diff --staged --quiet || ( git commit -m "chore: update last_blog_title.txt" && git push )
