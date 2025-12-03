@@ -21,35 +21,35 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install specific Chrome version (142.0.7444.175)
+      - name: Install required apt packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip xvfb libxi6
+          sudo apt-get install -y wget unzip xvfb libxi6 curl gnupg ca-certificates
 
+      - name: Install specific Chrome version (142.0.7444.175) and matching ChromeDriver
+        run: |
+          set -e
           echo "Downloading Chrome 142.0.7444.175..."
-          wget https://storage.googleapis.com/chrome-for-testing-public/142.0.7444.175/linux64/chrome-linux64.zip
-          wget https://storage.googleapis.com/chrome-for-testing-public/142.0.7444.175/linux64/chromedriver-linux64.zip
+          wget -q https://storage.googleapis.com/chrome-for-testing-public/142.0.7444.175/linux64/chrome-linux64.zip -O /tmp/chrome-linux64.zip
+          wget -q https://storage.googleapis.com/chrome-for-testing-public/142.0.7444.175/linux64/chromedriver-linux64.zip -O /tmp/chromedriver-linux64.zip
 
-          unzip chrome-linux64.zip
-          
-          # Remove existing Chrome binary
-          if [ -f "/usr/bin/google-chrome" ]; then
-            echo "Removing existing Chrome..."
-            sudo rm /usr/bin/google-chrome
-          fi
+          unzip -q /tmp/chrome-linux64.zip -d /tmp
+          unzip -q /tmp/chromedriver-linux64.zip -d /tmp
 
-          echo "Installing new Chrome..."
-          sudo mv chrome-linux64 /opt/google-chrome
-          sudo ln -s /opt/google-chrome/chrome /usr/bin/google-chrome
+          # Install Chrome to /opt/google-chrome and symlink binary
+          sudo rm -rf /opt/google-chrome || true
+          sudo mv /tmp/chrome-linux64 /opt/google-chrome
+          sudo ln -sf /opt/google-chrome/chrome /usr/bin/google-chrome
+          sudo ln -sf /opt/google-chrome/chrome /opt/google-chrome/chrome
 
-          echo "Installing Chromedriver..."
-          unzip chromedriver-linux64.zip
-          sudo mv chromedriver-linux64/chromedriver /usr/bin/chromedriver
+          # Install chromedriver to /usr/bin
+          sudo mv /tmp/chromedriver-linux64/chromedriver /usr/bin/chromedriver
           sudo chmod +x /usr/bin/chromedriver
 
-          echo "Verifying installation..."
-          google-chrome --version
-          chromedriver --version
+          echo "Chrome version:"
+          /opt/google-chrome/chrome --version || google-chrome --version
+          echo "Chromedriver version:"
+          /usr/bin/chromedriver --version || true
 
       - name: Install Python dependencies
         run: |
@@ -58,18 +58,20 @@ jobs:
 
       - name: Create .env from secrets
         run: |
-          echo "LINKEDIN_EMAIL=${{ secrets.LINKEDIN_EMAIL }}" >> .env
+          echo "LINKEDIN_EMAIL=${{ secrets.LINKEDIN_EMAIL }}" > .env
           echo "LINKEDIN_PASSWORD=${{ secrets.LINKEDIN_PASSWORD }}" >> .env
           echo "GENEMINIAPIKEY=${{ secrets.GENEMINIAPIKEY }}" >> .env
+        shell: bash
 
       - name: Run the LinkedIn poster
         env:
-          DOTENV_PATH: .env
-          DISPLAY: ":99"
+          LINKEDIN_EMAIL: ${{ secrets.LINKEDIN_EMAIL }}
+          LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
+          GENEMINIAPIKEY: ${{ secrets.GENEMINIAPIKEY }}
         run: |
-          # Start virtual display for Selenium
-          Xvfb :99 -screen 0 1920x1080x24 &
-
+          # (No Xvfb required because we run headless=new) but keeping just-in-case:
+          Xvfb :99 -screen 0 1920x1080x24 &>/dev/null &
+          export DISPLAY=":99"
           python main.py
 
       - name: Commit last_blog_title.txt if changed
