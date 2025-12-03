@@ -127,25 +127,17 @@ print("------------------------------------------------")
 print("Driver initializing...........................")
 
 chrome_options = Options()
-chrome_options.add_argument("--start-maximized")
-chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-chrome_options.add_experimental_option("detach", True)
+chrome_options.add_argument("--headless=new")        # REQUIRED FOR GITHUB ACTIONS
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--window-size=1920,1080")
 
+# ----------------------------------------------------
+# 🔥 Use the ChromeDriver installed by GitHub Actions
+# ----------------------------------------------------
+service = Service("/usr/bin/chromedriver")
 
-
-
-cache_dir = os.path.expanduser("~/chromedriver_cache")
-os.makedirs(cache_dir, exist_ok=True)
-driver_path_file = os.path.join(cache_dir, "chromedriver.exe")
-
-if not os.path.exists(driver_path_file):
-    print("Downloading ChromeDriver for the first time...")
-    temp_path = ChromeDriverManager().install()
-    shutil.copy(temp_path, driver_path_file)
-else:
-    print("Using cached ChromeDriver...")
-
-service = Service(driver_path_file)
 driver = webdriver.Chrome(service=service, options=chrome_options)
 wait = WebDriverWait(driver, 15)
 
