@@ -1,16 +1,15 @@
 name: Run LinkedIn RSS Poster
 
 on:
-  schedule:
-    - cron: "0 * * * *"     # every hour at :00
-  workflow_dispatch:       # manual trigger
+  workflow_dispatch:
 
 permissions:
-  contents: write          
+  contents: write          # required to commit back to repo
 
 jobs:
   run:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,42 +21,67 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Chrome (for Selenium)
+      - name: Install required apt packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y unzip xvfb libxi6 libgconf-2-4
-          # Install latest chrome
-          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-          sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
+          sudo apt-get install -y wget unzip xvfb libxi6 curl gnupg ca-certificates
 
-      - name: Install dependencies
+      - name: Install specific Chrome version (142.0.7444.175) and matching ChromeDriver
+        run: |
+          set -e
+          echo "Downloading Chrome 142.0.7444.175..."
+          wget -q https://storage.googleapis.com/chrome-for-testing-public/142.0.7444.175/linux64/chrome-linux64.zip -O /tmp/chrome-linux64.zip
+          wget -q https://storage.googleapis.com/chrome-for-testing-public/142.0.7444.175/linux64/chromedriver-linux64.zip -O /tmp/chromedriver-linux64.zip
+      
+          unzip -q /tmp/chrome-linux64.zip -d /tmp
+          unzip -q /tmp/chromedriver-linux64.zip -d /tmp
+      
+          # Install Chrome under /opt/google-chrome
+          sudo rm -rf /opt/google-chrome || true
+          sudo mv /tmp/chrome-linux64 /opt/google-chrome
+          sudo ln -sf /opt/google-chrome/chrome /usr/bin/google-chrome
+      
+          # Install chromedriver
+          sudo mv /tmp/chromedriver-linux64/chromedriver /usr/bin/chromedriver
+          sudo chmod +x /usr/bin/chromedriver
+      
+          echo "Chrome version:"
+          /opt/google-chrome/chrome --version || google-chrome --version
+          echo "Chromedriver version:"
+          /usr/bin/chromedriver --version || true
+
+
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Create .env from secrets
         run: |
-          echo "LINKEDIN_EMAIL=${{ secrets.LINKEDIN_EMAIL }}" >> .env
+          echo "LINKEDIN_EMAIL=${{ secrets.LINKEDIN_EMAIL }}" > .env
           echo "LINKEDIN_PASSWORD=${{ secrets.LINKEDIN_PASSWORD }}" >> .env
           echo "GENEMINIAPIKEY=${{ secrets.GENEMINIAPIKEY }}" >> .env
+        shell: bash
 
       - name: Run the LinkedIn poster
         env:
-          DOTENV_PATH: .env
-          DISPLAY: ":99"
+          LINKEDIN_EMAIL: ${{ secrets.LINKEDIN_EMAIL }}
+          LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
+          GENEMINIAPIKEY: ${{ secrets.GENEMINIAPIKEY }}
         run: |
+          # (No Xvfb required because we run headless=new) but keeping just-in-case:
+          Xvfb :99 -screen 0 1920x1080x24 &>/dev/null &
+          export DISPLAY=":99"
           python main.py
 
       - name: Commit last_blog_title.txt if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # ensure file exists and is tracked
+
           if [ -f last_blog_title.txt ]; then
             git add last_blog_title.txt || true
             git diff --staged --quiet || ( git commit -m "chore: update last_blog_title.txt" && git push )
           else
-            echo "no last_blog_title.txt found"
+            echo "last_blog_title.txt not found"
           fi
