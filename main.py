@@ -161,6 +161,8 @@ try:
     print("✅ Logged in successfully. Navigating to feed...")
     driver.get("https://www.linkedin.com/feed/")
     time.sleep(5)
+    page_html = driver.page_source
+    print(page_html)
 except Exception as e:
     print("⚠️ Login navigation issue:", e)
 
