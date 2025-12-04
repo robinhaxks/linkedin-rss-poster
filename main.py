@@ -116,11 +116,6 @@ if not new_posts:
 post = new_posts[0]
 
 response_text = generate_linkedin_post(post)
-print("------------------------------------------------")
-print(response_text)
-print("------------------------------------------------")
-
-
 
 
 print("Driver initializing...........................")
@@ -129,8 +124,6 @@ chrome_options = Options()
 chrome_options.add_argument("--start-maximized")
 chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 chrome_options.add_experimental_option("detach", True)
-chrome_options.add_argument("--headless=new") 
-
 
 cache_dir = os.path.expanduser("~/chromedriver_cache")
 os.makedirs(cache_dir, exist_ok=True)
@@ -147,7 +140,9 @@ service = Service(driver_path_file)
 driver = webdriver.Chrome(service=service, options=chrome_options)
 wait = WebDriverWait(driver, 15)
 
-
+# -----------------------------------------------------------------------------
+# ✅ Login and Navigate to Feed
+# -----------------------------------------------------------------------------
 driver.get("https://www.linkedin.com/login")
 print("🌐 Navigating to LinkedIn login...")
 
@@ -169,8 +164,9 @@ try:
 except Exception as e:
     print("⚠️ Login navigation issue:", e)
 
-
-
+# -----------------------------------------------------------------------------
+# ✅ Start a Post, Type Content, and Submit
+# -----------------------------------------------------------------------------
 try:
     start_post_btn = wait.until(
         EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Start a post')]"))
@@ -179,9 +175,6 @@ try:
     print("✅ 'Start a post' button clicked successfully!")
 except Exception as e:
     print("⚠️ Could not click 'Start a post' button:", e)
-
-
-
 
 try:
     post_input = wait.until(
@@ -192,7 +185,6 @@ try:
     post_input.click()
     safe_response_text = ''.join(c for c in response_text if ord(c) <= 0xFFFF)
     post_input.send_keys(safe_response_text)
-    print(safe_response_text)
     print("✅ Text typed successfully!")
     time.sleep(2)
 except Exception as e:
